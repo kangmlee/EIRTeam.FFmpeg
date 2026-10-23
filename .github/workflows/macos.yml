@@ -8,8 +8,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: autobuild-2025-11-12-13-44   # = v1.1.4, the version you already ship
-          submodules: recursive              # ffmpeg-kit is a submodule
+          ref: autobuild-2025-11-12-13-44
+
+      - name: Fetch submodules
+        run: |
+          git submodule update --init --progress
+          ls -la ffmpeg-kit gdextension_build/godot-cpp
 
       - name: Install build tools
         run: make bootstrap
@@ -22,13 +26,15 @@ jobs:
         run: make gdextension PLATFORM=macos
 
       - name: Collect binaries
+        if: always()
         run: |
           mkdir -p out
-          find . -name "libgdffmpeg.macos.*" -maxdepth 6 -exec cp -R {} out/ \;
-          find thirdparty/ffmpeg/macos -name "*.dylib" -exec cp {} out/ \;
+          find . -name "libgdffmpeg.macos.*" -maxdepth 6 -exec cp -R {} out/ \; || true
+          find thirdparty/ffmpeg/macos -name "*.dylib" -exec cp {} out/ \; || true
           ls -lR out
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: ffmpeg-macos
           path: out/
