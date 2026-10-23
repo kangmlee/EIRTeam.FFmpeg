@@ -12,9 +12,21 @@ jobs:
           ref: autobuild-2025-11-12-13-44
 
       - name: Fetch submodules
+        run: git submodule update --init --progress
+
+      - name: Drop GPL encoders from the macOS build
         run: |
-          git submodule update --init --progress
-          ls -la ffmpeg-kit gdextension_build/godot-cpp
+          python3 - <<'PY'
+          import io
+          lines = io.open('Makefile').read().split('\n')
+          for i, l in enumerate(lines):
+              if './macos.sh' in l:
+                  lines[i] = l.replace('--enable-gpl ', '').rstrip('\\').rstrip()
+                  if i + 1 < len(lines) and '--enable-x26' in lines[i + 1]:
+                      lines[i + 1] = ''
+          io.open('Makefile', 'w').write('\n'.join(lines))
+          PY
+          grep -n -A1 "macos.sh" Makefile
 
       - name: Install build tools
         run: make bootstrap
@@ -26,15 +38,21 @@ jobs:
       - name: Build
         run: make gdextension PLATFORM=macos
 
+      - name: Show build log on failure
+        if: failure()
+        run: tail -n 200 ffmpeg-kit/build.log || true
+
       - name: Collect binaries
         if: always()
         run: |
           mkdir -p out
           find . -name "libgdffmpeg.macos.*" -maxdepth 6 -exec cp -R {} out/ \; || true
-          find thirdparty/ffmpeg/macos -name "*.dylib" -exec cp {} out/ \; || true
+          find thirdparty/ffmpeg/macos -name "*.dylib" -exec cp {} out/ \; 2>/dev/null || true
           ls -lR out
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: ffmpeg-macos
+          path: out/
+          if-no-files-found: warn
