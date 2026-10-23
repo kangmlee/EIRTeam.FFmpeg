@@ -8,6 +8,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          repository: EIRTeam/EIRTeam.FFmpeg
           ref: autobuild-2025-11-12-13-44
 
       - name: Fetch submodules
@@ -37,4 +38,3 @@ jobs:
         if: always()
         with:
           name: ffmpeg-macos
-          path: out/
